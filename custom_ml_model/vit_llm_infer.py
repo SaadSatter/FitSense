@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from google import genai
 from transformers import ViTImageProcessor
 
-from train import MultiTaskViT
+from model_architecture import MultiTaskViT
 
 
 add_safe_globals([LabelEncoder])

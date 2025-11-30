@@ -19,9 +19,24 @@ export function initAnalysis() {
 }
 
 export async function getRecommendation() {
+    // Combine uploaded files with wardrobe items
+    const allFiles = [...state.uploadedFiles];
+    const allImageURLs = [...state.uploadedImageURLs];
+    
+    // Convert wardrobe images to files if included
+    if (state.includedWardrobeImageURLs.length > 0) {
+        for (const imageURL of state.includedWardrobeImageURLs) {
+            const response = await fetch(imageURL);
+            const blob = await response.blob();
+            const file = new File([blob], `wardrobe_${Date.now()}.jpg`, { type: blob.type });
+            allFiles.push(file);
+            allImageURLs.push(imageURL);
+        }
+    }
+    
     // Prepare form data
     const formData = new FormData();
-    state.uploadedFiles.forEach((file, index) => {
+    allFiles.forEach((file, index) => {
         // Add the index into the filename so the backend can restore ordering
         const indexedFile = new File([file], `${index}__${file.name}`, { type: file.type });
         formData.append('images', indexedFile);
@@ -38,9 +53,13 @@ export async function getRecommendation() {
     loadingState.classList.remove('hidden');
 
     try {
+        // Determine which backend to use
+        const backendPath = state.useMLBackend ? '/api/ml' : '/api';
+        const backendName = state.useMLBackend ? 'Custom ML model' : 'Gemini AI';
+        
         // Step 1: Vision Model Processing
-        updateLoadingMessage('Analyzing clothing attributes with vision model...');
-        const visionResponse = await fetch('http://localhost:3000/api/analyze-images', {
+        updateLoadingMessage(`Analyzing clothing attributes with ${backendName}...`);
+        const visionResponse = await fetch(`http://localhost:3000${backendPath}/analyze-images`, {
             method: 'POST',
             body: formData
         });
@@ -62,7 +81,7 @@ export async function getRecommendation() {
 
         // Step 2: LLM Recommendation
         updateLoadingMessage('Getting personalized recommendations from AI...');
-        const llmResponse = await fetch('http://localhost:3000/api/get-recommendation', {
+        const llmResponse = await fetch(`http://localhost:3000${backendPath}/get-recommendation`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -87,7 +106,7 @@ export async function getRecommendation() {
             attributes: visionData.attributes,
             recommendation: llmData.recommendation,
             selectedItems: llmData.selectedItems || [],
-            images: [...state.uploadedImageURLs], // Store image URLs for current session
+            images: allImageURLs, // Store all image URLs (uploaded + wardrobe)
             timestamp: new Date().toISOString()
         };
         

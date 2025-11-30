@@ -7,13 +7,13 @@ from torchvision import transforms, datasets
 import torch.nn.functional as F
 from torchvision.transforms import ToTensor, Normalize, Compose
 from PIL import Image
-from train import MultiTaskViT
+from model_architecture import MultiTaskViT
 from transformers import ViTModel, ViTImageProcessor, ViTForImageClassification, TrainingArguments, Trainer
 from datasets import load_dataset, Dataset, DatasetDict, Image, Features, ClassLabel, Value
 
 def load_model(checkpoint_path, model_name, device):
 
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     label_encoders = checkpoint['label_encoders']
     num_classes = checkpoint['num_classes']
 

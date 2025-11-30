@@ -24,3 +24,6 @@ Thumbs.db
 tmp/
 temp/
 uploads/
+
+# Pretrained models (large files)
+custom_ml_model/model/*.pth

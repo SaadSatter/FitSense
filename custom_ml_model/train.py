@@ -1,5 +1,5 @@
-from transformers import ViTModel, ViTImageProcessor, ViTForImageClassification, TrainingArguments, Trainer
-from datasets import load_dataset, Dataset, DatasetDict, Image, Features, ClassLabel, Value
+from transformers import ViTImageProcessor, ViTForImageClassification, TrainingArguments, Trainer
+from datasets import Dataset, DatasetDict, Image, Features, ClassLabel, Value
 import zipfile
 
 import torch
@@ -19,48 +19,15 @@ import os
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 
+# Import model architecture
+from model_architecture import MultiTaskViT
+
 
 #Please download datasets through the command: kaggle datasets download -d paramaggarwal/fashion-product-images-small
 zip_ref = zipfile.ZipFile('fashion-product-images-small.zip', 'r')
 zip_ref.extractall('/datasets')
 zip_ref.close()
 #########################################################################################
-
-
-class MultiTaskViT(nn.Module):
-    def __init__(self, model_name, num_classes_dict):
-        super(MultiTaskViT, self).__init__()
-
-        self.vit = ViTModel.from_pretrained(model_name)
-        hidden_size = self.vit.config.hidden_size
-
-        self.gender_classifier = nn.Linear(hidden_size, num_classes_dict['gender'])
-        self.articleType_classifier = nn.Linear(hidden_size, num_classes_dict['articleType'])
-        self.baseColour_classifier = nn.Linear(hidden_size, num_classes_dict['baseColour'])
-        self.season_classifier = nn.Linear(hidden_size, num_classes_dict['season'])
-        self.usage_classifier = nn.Linear(hidden_size, num_classes_dict['usage'])
-
-        self.dropout = nn.Dropout(0.1)
-
-    def forward(self, pixel_values):
-        outputs = self.vit(pixel_values=pixel_values)
-
-        cls_output = outputs.last_hidden_state[:, 0]
-        cls_output = self.dropout(cls_output)
-
-        gender_logits = self.gender_classifier(cls_output)
-        articleType_logits = self.articleType_classifier(cls_output)
-        baseColour_logits = self.baseColour_classifier(cls_output)
-        season_logits = self.season_classifier(cls_output)
-        usage_logits = self.usage_classifier(cls_output)
-
-        return {
-            'gender': gender_logits,
-            'articleType': articleType_logits,
-            'baseColour': baseColour_logits,
-            'season': season_logits,
-            'usage': usage_logits
-        }
 
 def prepare_data(df):
     label_encoders = {}

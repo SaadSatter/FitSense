@@ -106,6 +106,61 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 2rem;
+}
+
+.nav-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+.backend-toggle {
+    display: flex;
+    align-items: center;
+}
+
+.backend-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.backend-toggle-btn:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-dark);
+}
+
+.backend-label {
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.backend-name {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.backend-toggle-btn.ml-active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.backend-toggle-btn.ml-active .backend-label {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.backend-toggle-btn.ml-active .backend-name {
+    color: white;
 }
 
 .logo {
@@ -1621,3 +1676,181 @@ body {
     display: none !important;
 }
 /* -------------------- */
+
+/* Include Wardrobe Section */
+.include-wardrobe-section {
+    margin: 2rem 0;
+    text-align: center;
+    padding: 1.5rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-include-wardrobe {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.75rem;
+    border: 2px dashed var(--border-dark);
+    background: white;
+    color: var(--text-primary);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-include-wardrobe:hover {
+    background: var(--bg-secondary);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.include-wardrobe-hint {
+    margin-top: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* Included Wardrobe Preview */
+.included-wardrobe-preview {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: white;
+    border: 1px solid var(--border-color);
+}
+
+.included-wardrobe-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.included-wardrobe-header h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.btn-text-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.btn-text-danger:hover {
+    color: #dc2626;
+}
+
+.included-wardrobe-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 0.75rem;
+}
+
+.included-wardrobe-item {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+}
+
+.included-wardrobe-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Wardrobe Selector Modal */
+.wardrobe-selector-modal {
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.wardrobe-selector-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 1rem;
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.wardrobe-selector-item {
+    position: relative;
+    aspect-ratio: 1;
+    border: 2px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.wardrobe-selector-item:hover {
+    border-color: var(--border-dark);
+    transform: scale(1.05);
+}
+
+.wardrobe-selector-item.selected {
+    border-color: var(--primary-color);
+    border-width: 3px;
+}
+
+.wardrobe-selector-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.wardrobe-selector-checkbox {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    background: white;
+    border: 2px solid var(--border-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.wardrobe-selector-item.selected .wardrobe-selector-checkbox {
+    opacity: 1;
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.wardrobe-selector-checkbox svg {
+    color: white;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

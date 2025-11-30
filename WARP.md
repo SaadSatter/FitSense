@@ -17,11 +17,13 @@ FitSense (also referred to as FashionSense in some files) is an AI-powered fashi
 ### Three-Tier System
 
 1. **ML Layer (Python):**
-   - `train.py`: Multi-task Vision Transformer that predicts 5 attributes (gender, articleType, baseColour, season, usage)
+   - `model_architecture.py`: MultiTaskViT model definition (5 attributes: gender, articleType, baseColour, season, usage)
+   - `train.py`: Training script for MultiTaskViT (downloads dataset, trains model, saves checkpoint)
    - `cloth_segmentation.py`: U2NET-based segmentation that extracts clothing items from images
    - `vit_infer.py`: Single-image inference using trained ViT model
    - `vit_llm_infer.py`: Batch inference + Gemini integration for outfit recommendations
    - `networks.py`: U2NET architecture implementation (RSU modules)
+   - `ml_server.py`: Flask API server that wraps the ML backend for Node.js communication
 
 2. **Node.js API Server (`server/`):**
    - `server.js`: Express server with two main endpoints:
@@ -84,46 +86,51 @@ Open `http://localhost:3000` in browser after starting server.
 
 ### ML Model Operations
 
-**Download Dataset:**
+**Download Pretrained Models (Recommended):**
+```bash
+cd custom_ml_model/model
+bash download_models.sh
+```
+- Downloads `best_multitask_vit.pth` (~340 MB) - Required for ML backend
+- Downloads `checkpoint_u2net.pth` (~176 MB) - Optional, for cloth segmentation
+- See `custom_ml_model/model/README.md` for details
+
+**Train Multi-task ViT Model (Optional - Only if you want to retrain):**
 ```bash
 kaggle datasets download -d paramaggarwal/fashion-product-images-small
-```
-The dataset will be extracted to `./datasets/` when running `train.py`.
-
-**Train Multi-task ViT Model:**
-```bash
-python train.py
+python custom_ml_model/train.py
 ```
 - Trains on Kaggle fashion dataset (apparel category only)
 - Saves best model to `best_multitask_vit.pth`
-- Expected location: `./model/best_multitask_vit.pth`
+- Move trained model to `custom_ml_model/model/` for use with ML server
 - Batch size: 32, Learning rate: 2e-5, Epochs: 10
 - Uses AdamW optimizer with task-weighted loss
+- **Note:** The ML server does NOT run training - it only loads pretrained models
 
 **Run Single Image Inference:**
 ```bash
-python vit_infer.py <image_path>
+python custom_ml_model/vit_infer.py <image_path>
 ```
 
 **Run Batch Inference with LLM Recommendations:**
 ```bash
-python vit_llm_infer.py <event/context> <image_path1> [<image_path2> ...]
+python custom_ml_model/vit_llm_infer.py <event/context> <image_path1> [<image_path2> ...]
 ```
-Example: `python vit_llm_infer.py "business meeting" img1.jpg img2.jpg`
+Example: `python custom_ml_model/vit_llm_infer.py "business meeting" img1.jpg img2.jpg`
 
 **Run Cloth Segmentation:**
 ```bash
-python cloth_segmentation.py
+python custom_ml_model/cloth_segmentation.py
 ```
 - Processes images from `./input/raw_images/`
 - Outputs segmentation masks to `./input/masks/`
 - Outputs segmented clothes to `./output/segmented_clothes/`
-- Requires U2NET checkpoint at `./model/checkpoint_u2net.pth`
+- Requires U2NET checkpoint at `custom_ml_model/model/checkpoint_u2net.pth`
 - Creates 3 versions: black background, white background, transparent PNG
 
 ## Key Implementation Details
 
-### Multi-Task Vision Transformer (train.py)
+### Multi-Task Vision Transformer (model_architecture.py)
 
 The `MultiTaskViT` class uses a pretrained ViT backbone (`google/vit-base-patch16-224-in21k`) with 5 separate classification heads:
 - **gender**: Male/Female classification
@@ -131,6 +138,11 @@ The `MultiTaskViT` class uses a pretrained ViT backbone (`google/vit-base-patch1
 - **baseColour**: Primary color
 - **season**: Seasonal appropriateness
 - **usage**: Occasion type (formal, casual, sports, etc.)
+
+The model architecture is separated from training code in `model_architecture.py` so that:
+- ML server (`ml_server.py`) can import the model without running training code
+- Inference scripts (`vit_infer.py`, `vit_llm_infer.py`) can load pretrained models
+- Training script (`train.py`) can use the same architecture definition
 
 Task weights can be adjusted in training (default: articleType=1.5, others=1.0).
 

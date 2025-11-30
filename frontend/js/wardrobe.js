@@ -10,6 +10,7 @@ import {
     getDb
 } from './db.js';
 import { getRecommendation, showLoading, hideLoading } from './analysis.js';
+import { getWardrobeRecommendationML } from './ml-wardrobe.js';
 import { switchView } from './navigation.js';
 
 // Drag and drop state
@@ -488,6 +489,15 @@ async function getWardrobeRecommendation() {
         
         // Show loading state immediately (no need to switch views - loading overlays all views)
         showLoading();
+        
+        // If using ML backend, use special wardrobe analysis pathway
+        if (state.useMLBackend) {
+            console.log('Using ML backend for wardrobe analysis...');
+            const { displayResults } = await import('./results.js');
+            await getWardrobeRecommendationML(displayResults);
+            hideLoading();
+            return;
+        }
         
         // Convert wardrobe items to files for the API
         const files = [];

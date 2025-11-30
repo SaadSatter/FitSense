@@ -2,8 +2,8 @@
 
 import { state, MAX_ITEMS } from './state.js';
 import { toast } from './toast.js';
-import { getErrorHint } from './utils.js';
-import { addToWardrobe, getDb } from './db.js';
+import { getErrorHint, compressImage } from './utils.js';
+import { addToWardrobe, getDb, getAllWardrobeItems } from './db.js';
 
 // DOM Elements
 let uploadArea;
@@ -130,7 +130,10 @@ export function initUpload() {
                 for (let i = 0; i < state.uploadedImageURLs.length; i++) {
                     const imageURL = state.uploadedImageURLs[i];
                     const fileName = state.uploadedFiles[i]?.name || `item-${Date.now()}-${i}.jpg`;
-                    await addToWardrobe(imageURL, fileName);
+                    
+                    // Compress image to reduce storage usage
+                    const compressedURL = await compressImage(imageURL, 800, 0.8);
+                    await addToWardrobe(compressedURL, fileName);
                     savedCount++;
                 }
                 
@@ -158,9 +161,30 @@ export function initUpload() {
         });
     }
 
+    // Include Wardrobe button
+    const includeWardrobeBtn = document.getElementById('includeWardrobeBtn');
+    if (includeWardrobeBtn) {
+        includeWardrobeBtn.addEventListener('click', async () => {
+            await showWardrobeSelector();
+        });
+    }
+    
+    // Remove included wardrobe button
+    const removeIncludedWardrobe = document.getElementById('removeIncludedWardrobe');
+    if (removeIncludedWardrobe) {
+        removeIncludedWardrobe.addEventListener('click', () => {
+            state.includedWardrobeItems = [];
+            state.includedWardrobeImageURLs = [];
+            updateIncludedWardrobePreview();
+            updateSubmitButton();
+            updateItemCounter();
+        });
+    }
+
     // Initial state
     updateSubmitButton();
     updateItemCounter();
+    updateIncludedWardrobePreview();
 }
 
 function handleFiles(files) {
@@ -232,7 +256,7 @@ function renderImagePreviews() {
 
 export function updateSubmitButton() {
     if (!getRecommendationBtn) return;
-    const hasImages = state.uploadedFiles.length > 0;
+    const hasImages = state.uploadedFiles.length > 0 || state.includedWardrobeItems.length > 0;
     const hasContext = state.selectedContext || state.customContext;
     getRecommendationBtn.disabled = !(hasImages && hasContext);
 }
@@ -241,7 +265,7 @@ export function updateItemCounter() {
     const itemCounter = document.getElementById('itemCounter');
     const itemCount = document.getElementById('itemCount');
     const itemCountText = document.getElementById('itemCountText');
-    const count = state.uploadedFiles.length;
+    const count = state.uploadedFiles.length + state.includedWardrobeItems.length;
     
     if (itemCounter && itemCount && itemCountText) {
         itemCount.textContent = count;
@@ -323,4 +347,134 @@ export function resetUploadForm() {
     
     updateSubmitButton();
     updateItemCounter();
+}
+
+// Wardrobe inclusion functions
+async function showWardrobeSelector() {
+    try {
+        const allWardrobeItems = await getAllWardrobeItems();
+        
+        if (allWardrobeItems.length === 0) {
+            toast.info('Empty wardrobe', 'Add some items to your wardrobe first!');
+            return;
+        }
+        
+        // Create modal overlay
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content wardrobe-selector-modal">
+                <h3 class="modal-title">Select Items from Wardrobe</h3>
+                <p class="modal-description">Choose items to include with your uploaded images (up to ${MAX_ITEMS} total)</p>
+                <div class="wardrobe-selector-grid" id="wardrobeSelectorGrid"></div>
+                <div class="modal-actions">
+                    <button id="cancelWardrobeSelection" class="btn-modal btn-cancel">Cancel</button>
+                    <button id="confirmWardrobeSelection" class="btn-modal btn-primary">
+                        Add Selected (<span id="selectedCount">0</span>)
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        const gridEl = document.getElementById('wardrobeSelectorGrid');
+        const selectedCount = document.getElementById('selectedCount');
+        const confirmBtn = document.getElementById('confirmWardrobeSelection');
+        let selectedIds = [...state.includedWardrobeItems];
+        
+        // Render wardrobe items
+        allWardrobeItems.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'wardrobe-selector-item' + (selectedIds.includes(item.id) ? ' selected' : '');
+            div.innerHTML = `
+                <img src="${item.imageData}" alt="${item.fileName}">
+                <div class="wardrobe-selector-checkbox">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </div>
+            `;
+            
+            div.addEventListener('click', () => {
+                const currentTotal = state.uploadedFiles.length + selectedIds.length;
+                const isSelected = selectedIds.includes(item.id);
+                
+                if (isSelected) {
+                    selectedIds = selectedIds.filter(id => id !== item.id);
+                    div.classList.remove('selected');
+                } else {
+                    if (currentTotal >= MAX_ITEMS) {
+                        toast.warning('Limit reached', `Maximum ${MAX_ITEMS} items total`);
+                        return;
+                    }
+                    selectedIds.push(item.id);
+                    div.classList.add('selected');
+                }
+                
+                selectedCount.textContent = selectedIds.length;
+                confirmBtn.disabled = selectedIds.length === 0;
+            });
+            
+            gridEl.appendChild(div);
+        });
+        
+        selectedCount.textContent = selectedIds.length;
+        confirmBtn.disabled = selectedIds.length === 0;
+        
+        // Event handlers
+        document.getElementById('cancelWardrobeSelection').addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+        
+        document.getElementById('confirmWardrobeSelection').addEventListener('click', () => {
+            state.includedWardrobeItems = selectedIds;
+            state.includedWardrobeImageURLs = selectedIds.map(id => {
+                const item = allWardrobeItems.find(i => i.id === id);
+                return item ? item.imageData : null;
+            }).filter(Boolean);
+            
+            updateIncludedWardrobePreview();
+            updateSubmitButton();
+            updateItemCounter();
+            document.body.removeChild(modal);
+            toast.success('Added', `${selectedIds.length} item(s) from wardrobe included`);
+        });
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error showing wardrobe selector:', error);
+        toast.error('Error', 'Could not load wardrobe items');
+    }
+}
+
+function updateIncludedWardrobePreview() {
+    const previewSection = document.getElementById('includedWardrobePreview');
+    const includeSection = document.getElementById('includeWardrobeSection');
+    const itemsContainer = document.getElementById('includedWardrobeItems');
+    const countSpan = document.getElementById('includedWardrobeCount');
+    
+    if (!previewSection || !includeSection || !itemsContainer || !countSpan) return;
+    
+    if (state.includedWardrobeItems.length === 0) {
+        previewSection.classList.add('hidden');
+        includeSection.style.display = 'block';
+    } else {
+        previewSection.classList.remove('hidden');
+        includeSection.style.display = 'none';
+        countSpan.textContent = state.includedWardrobeItems.length;
+        
+        itemsContainer.innerHTML = '';
+        state.includedWardrobeImageURLs.forEach((url, index) => {
+            const div = document.createElement('div');
+            div.className = 'included-wardrobe-item';
+            div.innerHTML = `<img src="${url}" alt="Wardrobe item ${index + 1}">`;
+            itemsContainer.appendChild(div);
+        });
+    }
 }

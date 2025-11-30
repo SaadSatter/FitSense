@@ -1,5 +1,6 @@
 // Main Application Entry Point
 
+import { state } from './state.js';
 import { toast } from './toast.js';
 import { initDB, migrateHistoryToIndexedDB } from './db.js';
 import { 
@@ -30,6 +31,40 @@ import {
     updateSelectedWardrobeDisplay,
     updateWardrobeSubmitButton 
 } from './wardrobe.js';
+
+// Backend toggle functionality
+function initBackendToggle() {
+    const toggleBtn = document.getElementById('backendToggle');
+    const backendName = document.getElementById('backendName');
+    
+    if (!toggleBtn || !backendName) return;
+    
+    toggleBtn.addEventListener('click', () => {
+        state.useMLBackend = !state.useMLBackend;
+        updateBackendUI();
+        
+        const backendType = state.useMLBackend ? 'Custom ML Backend' : 'Gemini AI';
+        toast.success('Backend switched', `Now using: ${backendType}`, 2000);
+    });
+    
+    // Initial UI state
+    updateBackendUI();
+}
+
+function updateBackendUI() {
+    const toggleBtn = document.getElementById('backendToggle');
+    const backendName = document.getElementById('backendName');
+    
+    if (!toggleBtn || !backendName) return;
+    
+    if (state.useMLBackend) {
+        backendName.textContent = 'Custom ML';
+        toggleBtn.classList.add('ml-active');
+    } else {
+        backendName.textContent = 'Gemini';
+        toggleBtn.classList.remove('ml-active');
+    }
+}
 
 // Initialize database first, then view (history now requires DB)
 (async function initApp() {
@@ -97,6 +132,9 @@ import {
         if (getViewFromURL() === 'history') {
             await loadHistory();
         }
+        
+        // Initialize backend toggle
+        initBackendToggle();
         
     } catch (error) {
         console.error('Failed to initialize database:', error);

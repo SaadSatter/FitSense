@@ -152,3 +152,62 @@ export function markdownToHTML(text) {
     
     return html;
 }
+
+// Compress image data URL to reduce storage size
+export async function compressImage(dataURL, maxWidth = 800, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        
+        img.onload = () => {
+            // Calculate new dimensions maintaining aspect ratio
+            let width = img.width;
+            let height = img.height;
+            
+            if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+            }
+            
+            // Create canvas and draw resized image
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Convert to compressed JPEG
+            const compressedDataURL = canvas.toDataURL('image/jpeg', quality);
+            resolve(compressedDataURL);
+        };
+        
+        img.onerror = () => {
+            reject(new Error('Failed to load image for compression'));
+        };
+        
+        img.src = dataURL;
+    });
+}
+
+// Get storage usage estimate
+export async function getStorageEstimate() {
+    if ('storage' in navigator && 'estimate' in navigator.storage) {
+        try {
+            const estimate = await navigator.storage.estimate();
+            const usageInMB = (estimate.usage / (1024 * 1024)).toFixed(2);
+            const quotaInMB = (estimate.quota / (1024 * 1024)).toFixed(2);
+            const percentUsed = ((estimate.usage / estimate.quota) * 100).toFixed(1);
+            
+            return {
+                usage: usageInMB,
+                quota: quotaInMB,
+                percentUsed: percentUsed,
+                available: (estimate.quota - estimate.usage) / (1024 * 1024)
+            };
+        } catch (err) {
+            console.warn('Could not estimate storage:', err);
+            return null;
+        }
+    }
+    return null;
+}

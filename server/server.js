@@ -6,11 +6,14 @@ const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
+const FormData = require('form-data');
+const fetch = require('node-fetch');
 
 const { isDemoMode, analyzeImagesWithGemini, getRecommendationFromGemini } = require('./gemini');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const ML_BACKEND_URL = process.env.ML_BACKEND_URL || 'http://localhost:5001';
 
 // Middleware
 app.use(cors());
@@ -26,9 +29,17 @@ const upload = multer({
 
 // Log API key status on startup
 console.log('Checking API Key...');
-console.log('API Key exists:', !!process.env.GEMINI_API_KEY);
-console.log('API Key length:', process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.length : 0);
-console.log('First 10 chars:', process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 10) + '...' : 'N/A');
+if (isDemoMode()) {
+    console.log('Demo Mode: ENABLED (using mock data)');
+    console.log('Reason: No valid API key detected');
+    if (process.env.GEMINI_API_KEY) {
+        console.log('Found placeholder value:', process.env.GEMINI_API_KEY);
+    }
+} else {
+    console.log('API Key: VALID');
+    console.log('API Key length:', process.env.GEMINI_API_KEY.length);
+    console.log('First 10 chars:', process.env.GEMINI_API_KEY.substring(0, 10) + '...');
+}
 
 // API Routes
 
@@ -69,6 +80,121 @@ app.post('/api/analyze-images', upload.array('images', 10), async (req, res) => 
         console.error('Error in analyze-images:', error);
         res.status(500).json({
             error: 'Failed to analyze images',
+            message: error.message,
+        });
+    }
+});
+
+// ML Backend proxy endpoints
+app.post('/api/ml/analyze-images', upload.array('images', 10), async (req, res) => {
+    try {
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: 'No images provided' });
+        }
+
+        console.log(`Forwarding ${req.files.length} images to ML backend...`);
+
+        // Create form data to forward to ML backend
+        const formData = new FormData();
+        req.files.forEach((file) => {
+            formData.append('images', file.buffer, {
+                filename: file.originalname,
+                contentType: file.mimetype
+            });
+        });
+
+        // Forward to ML backend
+        const mlResponse = await fetch(`${ML_BACKEND_URL}/api/ml/analyze-images`, {
+            method: 'POST',
+            body: formData,
+            headers: formData.getHeaders()
+        });
+
+        if (!mlResponse.ok) {
+            const errorText = await mlResponse.text();
+            throw new Error(`ML backend error: ${errorText}`);
+        }
+
+        const mlData = await mlResponse.json();
+        res.json(mlData);
+
+    } catch (error) {
+        console.error('Error in ML analyze-images:', error);
+        res.status(500).json({
+            error: 'Failed to analyze images with ML backend',
+            message: error.message,
+        });
+    }
+});
+
+app.post('/api/ml/get-recommendation', async (req, res) => {
+    try {
+        const { attributes, context } = req.body;
+
+        if (!attributes || !context) {
+            return res.status(400).json({ error: 'Missing attributes or context' });
+        }
+
+        console.log(`Forwarding recommendation request to ML backend for context: ${context}`);
+
+        // Forward to ML backend
+        const mlResponse = await fetch(`${ML_BACKEND_URL}/api/ml/get-recommendation`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ attributes, context })
+        });
+
+        if (!mlResponse.ok) {
+            const errorText = await mlResponse.text();
+            throw new Error(`ML backend error: ${errorText}`);
+        }
+
+        const mlData = await mlResponse.json();
+        res.json(mlData);
+
+    } catch (error) {
+        console.error('Error in ML get-recommendation:', error);
+        res.status(500).json({
+            error: 'Failed to get recommendation from ML backend',
+            message: error.message,
+        });
+    }
+});
+
+// ML wardrobe analysis endpoint - analyzes wardrobe items with ViT + LLM
+app.post('/api/ml/analyze-wardrobe', async (req, res) => {
+    try {
+        const { wardrobeItems, context } = req.body;
+
+        if (!wardrobeItems || !context) {
+            return res.status(400).json({ error: 'Missing wardrobeItems or context' });
+        }
+
+        console.log(`Forwarding ${wardrobeItems.length} wardrobe items to ML backend for context: ${context}`);
+
+        // Forward to ML backend
+        const mlResponse = await fetch(`${ML_BACKEND_URL}/api/ml/analyze-wardrobe`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ wardrobeItems, context })
+        });
+
+        if (!mlResponse.ok) {
+            const errorText = await mlResponse.text();
+            throw new Error(`ML backend error: ${errorText}`);
+        }
+
+        const mlData = await mlResponse.json();
+        res.json(mlData);
+
+    } catch (error) {
+        console.error('Error in ML analyze-wardrobe:', error);
+        res.status(500).json({
+            error: 'Failed to analyze wardrobe with ML backend',
             message: error.message,
         });
     }

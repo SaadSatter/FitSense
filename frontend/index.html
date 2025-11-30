@@ -12,6 +12,17 @@
         <nav class="navbar">
             <div class="nav-content">
                 <h1 class="logo" id="logoBtn" style="cursor: pointer;">✨ Fashion Sense</h1>
+                <div class="nav-center">
+                    <div class="backend-toggle">
+                        <button id="backendToggle" class="backend-toggle-btn" title="Switch between Gemini AI and Custom ML Backend">
+                            <span class="backend-label">Backend:</span>
+                            <span class="backend-name" id="backendName">Gemini</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 12h18M3 6h18M3 18h18"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
                 <div class="nav-links">
                     <button class="nav-btn" data-view="upload">Upload</button>
                     <button class="nav-btn" data-view="wardrobe">My Wardrobe</button>
@@ -77,6 +88,34 @@
                                 Clear All
                             </button>
                         </div>
+                    </div>
+
+                    <!-- Include Wardrobe Items -->
+                    <div id="includeWardrobeSection" class="include-wardrobe-section">
+                        <button id="includeWardrobeBtn" class="btn-include-wardrobe">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="12" y1="8" x2="12" y2="16"></line>
+                                <line x1="8" y1="12" x2="16" y2="12"></line>
+                            </svg>
+                            <span>Include Items from My Wardrobe</span>
+                        </button>
+                        <p class="include-wardrobe-hint">Combine uploaded images with items from your saved wardrobe</p>
+                    </div>
+
+                    <!-- Wardrobe Items Preview (when included) -->
+                    <div id="includedWardrobePreview" class="included-wardrobe-preview hidden">
+                        <div class="included-wardrobe-header">
+                            <h4>Items from Wardrobe (<span id="includedWardrobeCount">0</span>)</h4>
+                            <button id="removeIncludedWardrobe" class="btn-text-danger">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                                Remove Wardrobe Items
+                            </button>
+                        </div>
+                        <div id="includedWardrobeItems" class="included-wardrobe-items"></div>
                     </div>
 
                     <!-- Context Selection -->

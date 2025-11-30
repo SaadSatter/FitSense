@@ -86,7 +86,17 @@ export async function addToWardrobe(imageDataURL, fileName) {
             const request = store.add(item);
 
             request.onsuccess = () => resolve(request.result);
-            request.onerror  = () => reject(request.error);
+            request.onerror  = (event) => {
+                const error = event.target.error;
+                // Check for quota exceeded
+                if (error.name === 'QuotaExceededError') {
+                    const quotaError = new Error('Storage quota exceeded. Try clearing some wardrobe items or history.');
+                    quotaError.name = 'QuotaExceededError';
+                    reject(quotaError);
+                } else {
+                    reject(error);
+                }
+            };
         } catch (err) {
             reject(err);
         }
@@ -148,7 +158,17 @@ export async function addToHistoryDB(result) {
             const request = store.put(historyItem); // put will update if exists, add if not
 
             request.onsuccess = () => resolve(true);
-            request.onerror = () => reject(request.error);
+            request.onerror = (event) => {
+                const error = event.target.error;
+                // Check for quota exceeded
+                if (error.name === 'QuotaExceededError') {
+                    const quotaError = new Error('Storage quota exceeded. Try clearing history or using fewer/smaller images.');
+                    quotaError.name = 'QuotaExceededError';
+                    reject(quotaError);
+                } else {
+                    reject(error);
+                }
+            };
         } catch (err) {
             reject(err);
         }

@@ -4,9 +4,26 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { generateMockAttributes, generateMockRecommendation } = require('./mock');
 
 // Check demo mode status
-const DEMO_MODE = !process.env.GEMINI_API_KEY || 
-                  process.env.GEMINI_API_KEY === 'YOUR_API_KEY_HERE' || 
-                  process.env.GEMINI_API_KEY === '';
+function checkDemoMode() {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === '') return true;
+    
+    // Check for common placeholder values
+    const placeholders = [
+        'YOUR_API_KEY_HERE',
+        'your_api_key_here',
+        'your_actual_api_key_here',
+        'INSERT_YOUR_KEY_HERE',
+        'REPLACE_WITH_YOUR_KEY',
+        'YOUR-API-KEY',
+        'YOUR_GEMINI_API_KEY'
+    ];
+    
+    const keyLower = apiKey.toLowerCase();
+    return placeholders.some(p => keyLower === p.toLowerCase());
+}
+
+const DEMO_MODE = checkDemoMode();
 
 // Initialize Gemini API (only if not in demo mode)
 const genAI = DEMO_MODE ? null : new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
